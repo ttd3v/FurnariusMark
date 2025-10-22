@@ -1,6 +1,5 @@
 #include <alloca.h>
 #include<argp.h>
-#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -59,63 +58,149 @@ static inline unsigned long get_cost(int tag, int close){
 
 static inline int push_html_tag(char ** restrict html, unsigned long* cursor, unsigned long* capacity, int close, int tag){
     unsigned long cost = get_cost(tag, close);
-    if (capacity - cursor < cost){
-        void* ptr = realloc(*html, *capacity*2);
+    if (*capacity - *cursor < cost){
+        void* ptr = realloc(*html, (cost*2)+*capacity*2);
         if (!ptr){
             return -1;
         }
         *html = ptr;
+        *capacity*=2;
+        *capacity+=(cost*2);
     }
-    *capacity*=2;
     memcpy(*html+*cursor, close?CTAGS[tag]:OTAGS[tag], cost);
     *cursor+=cost;
     
     return 0;
 }
+#define PARSER_START() \
+    printf("🚀 Starting markdown parser...\n"); \
+    fflush(stdout);
 
-int parse(char const* input, char ** restrict html, unsigned long size, struct Parameters param){
+#define PARSER_COMPLETE() \
+    printf("✅ Parsing completed successfully!\n"); \
+    fflush(stdout);
+
+#define PARSER_PROGRESS(percent) \
+    printf("⏳ Progress: %d%%\r", percent); \
+    fflush(stdout);
+
+// Context-specific parsing notifications
+#define PARSE_HEADER(level) \
+    printf("📋 Parsing H%d header\n", level); \
+    fflush(stdout);
+
+#define PARSE_BOLD() \
+    printf("💪 Parsing bold text\n"); \
+    fflush(stdout);
+
+#define PARSE_ITALIC() \
+    printf("📝 Parsing italic text\n"); \
+    fflush(stdout);
+
+#define PARSE_CODE() \
+    printf("💻 Parsing inline code\n"); \
+    fflush(stdout);
+
+#define PARSE_CODE_BLOCK() \
+    printf("🖥️  Parsing code block\n"); \
+    fflush(stdout);
+
+#define PARSE_PARAGRAPH() \
+    printf("📄 Parsing paragraph\n"); \
+    fflush(stdout);
+
+#define PARSE_LIST() \
+    printf("📝 Parsing list\n"); \
+    fflush(stdout);
+
+#define PARSE_HR() \
+    printf("➖ Parsing horizontal rule\n"); \
+    fflush(stdout);
+
+// File operations
+#define FILE_READING(filename) \
+    printf("📖 Reading file: %s\n", filename); \
+    fflush(stdout);
+
+#define FILE_WRITING(filename) \
+    printf("💾 Writing output to: %s\n", filename); \
+    fflush(stdout);
+
+#define FILE_READ_COMPLETE(bytes) \
+    printf("✓ Read %lu bytes\n", (unsigned long)bytes); \
+    fflush(stdout);
+
+#define PARSE_BOLD_ITALIC() \
+    printf("📝 Parsing bold and italic text\n"); \
+    fflush(stdout);
+// Memory operations
+#define MEMORY_ALLOC(size) \
+    printf("🧠 Allocating %lu bytes\n", (unsigned long)size); \
+    fflush(stdout);
+
+#define MEMORY_REALLOC(new_size) \
+    printf("🔄 Reallocating to %lu bytes\n", (unsigned long)new_size); \
+    fflush(stdout);
+
+// Error notifications
+#define PARSER_ERROR(msg) \
+    printf("❌ Error: %s\n", msg); \
+    fflush(stdout);
+
+#define PARSER_WARNING(msg) \
+    printf("⚠️  Warning: %s\n", msg); \
+    fflush(stdout);
+
+int all_right(char input, char* memo, int len){
+    for (int i = 0; i < len; i ++ ){
+        if (*(memo+i) == input){
+            return 0;
+        }
+    }
+    return 1;
+}
+
+unsigned int dump_line(const unsigned int start, const char* text,const unsigned int length, char**  html,unsigned long * html_capacity,unsigned long * html_cursor, char* until){
+    unsigned int seg_size = 0;
+    char *pattern = until == NULL?"\0":until;
+    int len = strlen(pattern);
+    while(start+seg_size < length){
+        if(text[start+seg_size] != '\0' && text[start+seg_size] != '\n' && all_right(text[start+seg_size], pattern, len)){
+            seg_size += 1;
+            continue;
+        }
+        break;
+    }
+    if(*html_capacity-*html_cursor < seg_size){
+        void *ptr = realloc(*html, 1+*html_capacity*2);
+        if(ptr == NULL){
+            printf("Critical, finishing the program.\n[ENOMEM] Failed to rallocate on dump_line\n");
+            exit(-1);
+        }
+        *html = ptr;
+        *html_capacity*=2;
+        *html_capacity+=1;
+    }
+    memcpy(*html+*html_cursor, text+start, seg_size);
+    *html_cursor+=seg_size;
+    return seg_size;
+}
+
+int parse(char const* input, char ** restrict html,const unsigned long size, struct Parameters param){
     unsigned long html_cursor=0;
     unsigned long html_capacity = size*2;
     *html = calloc(html_capacity, 1);
     int context = 0;
     unsigned long start = 0;
     unsigned int idx = 0;
-    unsigned int rel = 0;
     int flush = 0;
     int wflush = 0;
+    #define nl (start == 0 ||input[start-1]=='\n')
     while (start < size){
-        
-        if (input[start] == '*'){
-            int stack = 0;
-            int segment = 1;
-            int len = 0;
-            int target = 0;
-            for (idx = start; idx < size && input[idx] != '\n'; idx ++){
-                if(input[idx] == '*' && !segment && stack == target){break;};
-                if(input[idx] == '*') {stack++;continue;};
-                if(isalnum(input[idx])){
-                    target = stack*2;
-                    segment = 0;
-                    len++;
-                }
-            }
-            stack/=2;
-            if (push_html_tag(html, &html_cursor, &html_capacity, 0, stack) < 0){
-                printf("Failed to allocate memory :(\nFinishing the program.\n");
-            }
-            if(html_capacity-(html_cursor+len) < len){
-                void* bu = realloc(*html,  len+(html_capacity * 2));
-                html_capacity*=2;
-                *html = bu;
-            }
-            memcpy(*html+html_cursor, &input[start+stack], len);
-            html_cursor+=len;
-            if (push_html_tag(html, &html_cursor, &html_capacity, 1, stack) < 0){
-                printf("Failed to allocate memory :(\nFinishing the program.\n");
-            }
-            start+=idx+stack;
-        }
+        printf("bt: roll\n");
+        printf("bt: start %lu\n",start);
         if(input[start] == '\n'){
+            printf("bt: \\n\n");
             if(flush){
                 if (push_html_tag(html, &html_cursor, &html_capacity, 1, wflush)<0){
                     printf("Failed to allocate memory :( \n");
@@ -124,69 +209,107 @@ int parse(char const* input, char ** restrict html, unsigned long size, struct P
                 flush = 0;
                 wflush = flush;
             }
-            rel=0;
+            start++;
         }
-        if(input[start] == '#' && rel == 1){
+        if ( nl && input[start] != ' ' && input[start] != '#' && input[start] != '-' && input[start] != '*' && input[start] != '`' && !flush) {
+            PARSE_PARAGRAPH()
+            if (push_html_tag(html, &html_cursor, &html_capacity, 0, HTML_Paragraph) < 0) {
+                printf("Failed to allocate memory :(\n");
+                return -1;
+            }
+            unsigned long c = dump_line(start, input, size, html, &html_capacity, &html_cursor, "*´-#\0");
+            html_cursor+=c;
+            start+=c;
+        }
+        
+        if (input[start] == '*'){
+            printf("*\n");fflush(stdout); 
             int stack = 0;
-            for (idx = start+1; idx < size && stack < 3 && input[idx] != '\n'; idx++){
+            for (; start < size; ){
+                if(input[start] == '*'){
+                    stack+=1;
+                    start++;
+                    continue;;
+                };
+                if(input[start] != '*'){
+                    break;
+                }
+            }
+            if (push_html_tag(html, &html_cursor, &html_capacity, 0, stack-1) < 0){
+                printf("Failed to allocate memory :(\nFinishing the program.\n");;exit(-1);
+            };
+            start+=stack;
+            start += dump_line(start, input, size, html, &html_capacity, &html_cursor, "*") + stack;
+            if (push_html_tag(html, &html_cursor, &html_capacity, 1, stack-1) < 0){
+                PARSER_ERROR("Failed to allocate memory :(\nFinishing the program.\n");exit(-1);
+            }
+
+            
+        }
+        
+        if(input[start] == '#' && nl){
+            int stack = 0;
+            for (idx = start; idx < size && stack < 3 && input[idx] != '\n'; idx++){
                 if(input[idx] == '#') {stack++;continue;};
                 break;
             }
-
-            if (push_html_tag(html, &html_cursor, &html_capacity, 0, 4+stack)<0){
+            PARSE_HEADER(stack);
+            if (push_html_tag(html, &html_cursor, &html_capacity, 0, 3+stack)<0){
                 printf("Failed to allocate memory :( \n");
                 return -1;
             }
-            start+=stack;
-            if(html_capacity-html_cursor < size-start){
-                void* n = realloc(*html, html_capacity+1+size-start);
-                if(!n){
-                    printf("Failed to allocate memory :( \n");
-                    return -1;
-                }
-                *html = n;
-            }
-            while(input[start] != '\n' && input[start] != '\0' && input[start] != EOF){   
-                (*html)[html_cursor] = input[start]; 
-                html_cursor++;
-                start++;
-            }
-            
-            if (push_html_tag(html, &html_cursor, &html_capacity, 1, 4+stack)<0){
-                printf("Failed to allocate memory :( \n");
+            start+=stack+1;
+            switch (stack) {
+                case 0:
+                    wflush = HTML_H1;
+                    break;
+                case 1:
+                    wflush = HTML_H2;
+                    break;
+                case 2:
+                    wflush = HTML_H3;
+                    break;
+                default:
+                    wflush = HTML_H1;
+                    break;
+            };
+            start+=dump_line(start, input, size, html, &html_capacity, &html_cursor,NULL);
+            if (push_html_tag(html, &html_cursor, &html_capacity, 1, 3+stack) < 0) {
                 return -1;
-            }; 
+            }
         }
-        if(input[start] == '-' && rel == 1 && !flush){
+        if(input[start] == '-' && nl && !flush){
+            PARSE_LIST();
             int stack = 0;
             for (idx = start; idx < size && stack < 3 && input[idx] != '\n'; idx++){
                 if(input[idx] == '-') {stack++;continue;};
                 break;
             }
             if(stack == 1){
-                if (push_html_tag(html, &html_cursor, &html_capacity, 0, 8)<0){
-                    printf("Failed to allocate memory :( \n");
+                if (push_html_tag(html, &html_cursor, &html_capacity, 0, HTML_Ul)<0){
+                    printf("Failed to allocate memory :(\n");
                     return -1;
                 }
-                start+=stack; 
-                flush=1;
-                wflush=8;
+                start+=dump_line(start, input, size, html, &html_capacity, &html_cursor,NULL);
+                 if (push_html_tag(html, &html_cursor, &html_capacity, 1, HTML_Ul)<0){
+                    printf("Failed to allocate memory :(\n");
+                    return -1;
+                }
             }
             if(stack>1){
                 if(html_capacity - html_cursor < 5){
-                    void* n = realloc(*html, 5 + html_capacity*2);
-                    html_capacity*=2;
+                    void* n = realloc(*html, 5 + (html_capacity*2));
+                    html_capacity= (html_capacity*2) + 5;
                     if(!n){
-                        printf("Failed to allocate memory :(");
+                        printf("Failed to allocate memory :(\n");
                         exit(-1);
                     }
-                } 
+                }
                 memcpy(*html + html_cursor, "<hr/>", 5);
-                start+=stack;
-                html_cursor+=5;
             }
+            start+=stack;
         }
-        if (input[start] == '`' && rel == 1) {
+        if (input[start] == '`' && nl) {
             int stack = 0;
             unsigned long idx = start;
             while (idx < size && input[idx] == '`' && stack < 3) {
@@ -197,10 +320,12 @@ int parse(char const* input, char ** restrict html, unsigned long size, struct P
             unsigned long content_start = idx;
             unsigned long len = 0;
             int closed = 0;
+            if (stack != 1) PARSE_CODE_BLOCK();
+            if (stack == 1) PARSE_CODE();
             while (idx < size) {
                 if (input[idx] == '`' && (idx + stack <= size) && strncmp(&input[idx], "```", stack) == 0) {
                     closed = 1;
-                    idx += stack;
+                    idx += stack + 1;
                     break;
                 }
                 len++;
@@ -227,39 +352,37 @@ int parse(char const* input, char ** restrict html, unsigned long size, struct P
                     return -1;
                 }
                 start = idx;
-                rel = 0;
             }
             start++;
         }
-        if (rel == 1 && input[start] != '#' && input[start] != '-' && input[start] != '*' && input[start] != '`' && !flush) {
-            if (push_html_tag(html, &html_cursor, &html_capacity, 0, HTML_Paragraph) < 0) {
-                printf("Failed to allocate memory :(\n");
-                return -1;
+        if (wflush == HTML_Paragraph){
+            if (html_capacity - html_cursor == 0 ){
+                *html = realloc(*html, html_capacity*=2);
+                if (!html){
+                    printf("Failed to allocate memory :/\n");
+                    exit(-1);
+                }
+                memcpy(*html + html_cursor,input+start,1);
             }
-            flush = 1;
-            wflush = HTML_Paragraph;
-            memcpy(*html + html_cursor, &input[start], 1);
-            html_cursor++;
-            start++;
-            rel++;
         }
-        start ++;rel++;
+        start++;
     }
 
     
     char n[255] = {0};
     snprintf(n, 255, "./%s.html",param.title);
 
-    FILE* output = fopen(n, "a");
+    FILE* output = fopen(n, "w");
     if(!output){
         printf("Failed to create output file.\n");
         return -1;
     }
-    
+    (*html)[html_cursor] = '\0'; 
     size_t css_len = param.css_href ? strlen(param.css_href) : 0;
-    char *final_html = malloc(strlen(*html) + strlen(param.title) + css_len + 300);
+    #define NULL_TERM_SIZE 1
+    char *final_html = malloc(strlen(*html)+NULL_TERM_SIZE + param.title_len+ NULL_TERM_SIZE+ css_len+ NULL_TERM_SIZE+ strlen(HTML_PRESET) + NULL_TERM_SIZE);
 
-    snprintf(final_html, strlen(*html) + strlen(param.title) + strlen(param.css_href) + 300, 
+    snprintf(final_html, strlen(*html) + param.title_len + param.css_href_len + 300, 
     HTML_PRESET, param.title, param.css_href ? param.css_href : "", *html);
 
     if (fwrite(final_html, strlen(final_html), 1, output) <= 0) {
@@ -269,6 +392,9 @@ int parse(char const* input, char ** restrict html, unsigned long size, struct P
     }
 
     free(final_html);
+    if (param.title) free(param.title);
+    if (param.css_href) free(param.css_href);
+    if (param.file) fclose(param.file);
 
     return 0;
 }
@@ -355,20 +481,9 @@ int prompt(struct Parameters* param){
             param->css_href_len = l;
         }
     }
-    {
-        void* n = realloc(param->title, param->title_len);
-        if(n != NULL){
-            param->title = n;
-        }
-    }
-    {
-        void* n = realloc(param->css_href, param->css_href_len);
-        if(n != NULL){
-            param->css_href = n;
-        }
-    }
     return process(param);
 }
+
 int main (){
     struct Parameters param = {0};
     prompt(&param);
