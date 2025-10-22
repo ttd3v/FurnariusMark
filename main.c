@@ -156,7 +156,10 @@ int parse(char const* input, char ** restrict html,const unsigned long size, str
                 *html = realloc(*html, html_capacity*=4);
             }
             memcpy((*html)+html_cursor, input+beggining, start-beggining);
-            html_cursor+=(start-beggining)+8;
+            html_cursor+=(start-beggining);
+            if (start + 7 < size) {
+                start += 8;
+            }
             continue;
         }
         if(input[start] == '#' && nl){
