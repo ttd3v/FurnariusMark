@@ -1,2 +1,4 @@
-main
-output.html
+./main
+./test.md
+./soft_test.md
+./output*
