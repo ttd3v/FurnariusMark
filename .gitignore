@@ -1,5 +1,6 @@
-./main
-./test.md
-./soft_test.md
-./output*
-./output.html
+main
+test.md
+soft_test.md
+output*
+output.html
+
