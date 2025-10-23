@@ -1,10 +1,37 @@
+/*
+ * Copyright (C) 2025 ttd3v
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed WITHOUT ANY WARRANTY; without even the
+ * implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See <https://www.gnu.org/licenses/> for details.
+ */
+
 #include <alloca.h>
 #include<argp.h>
+#include <asm-generic/errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-static const char* HTML_PRESET = "<html lang=\"en\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>%s</title><link rel=\"stylesheet\" href=\"%s\"></head><body>%s</body></html>";
+const char *argp_program_version = "furnariusmark 1.0";
+const char *argp_program_bug_address = "furnarius.mark@proton.me";
+static char doc[] = "FurnariusMark";
+static char args_doc[] = "";
+
+static struct argp_option options[] = {
+    {"preset",'p', "HTML_PRESET", 0, "Input hmtl preset file path", 0},
+    {"file", 'f', "FILE", 0, "Input markdown file path", 0},
+    {"title", 't', "TITLE", 0, "HTML page title", 0},
+    {"css", 'c', "CSS_HREF", 0, "CSS stylesheet href (optional)", 0},
+    {0}
+};
+
+static char* HTML_PRESET = "<html lang=\"en\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>%s</title><link rel=\"stylesheet\" href=\"%s\"></head><body>%s</body></html>";
 
 struct Parameters{
     FILE* file;
@@ -415,9 +442,65 @@ int prompt(struct Parameters* param){
     }
     return process(param);
 }
-
-int main (){
-    struct Parameters param = {0};
-    prompt(&param);
+static error_t parse_opt(int key, char *arg, struct argp_state *state) {
+    struct Parameters *param = state->input;
+    
+    switch (key) {
+        case 'p':
+            {
+                FILE* f = fopen(arg,"r");
+                if(!f){
+                    fprintf(stderr, "\033[1;31mFailed to open file: %s\033[0m\n", arg);
+                    return ARGP_ERR_UNKNOWN;
+                }
+                unsigned long file_size = get_file_size(f);
+                HTML_PRESET = calloc(file_size+1, sizeof(char));
+                int r = fread(HTML_PRESET, 1, file_size, f);
+                if (r != file_size){
+                    fprintf(stderr, "\033[1;31mFailed to read file\033[0m\n");
+                    return ENODATA;
+                }
+                fclose(f);
+            }
+            break;
+        case 'f':
+            param->file = fopen(arg, "r");
+            if (!param->file) {
+                fprintf(stderr, "\033[1;31mFailed to open file: %s\033[0m\n", arg);
+                return ARGP_ERR_UNKNOWN;
+            }
+            break;
+        case 't':
+            param->title_len = strlen(arg);
+            param->title = malloc(param->title_len + 1);
+            if (!param->title) {
+                fprintf(stderr, "\033[1;31mFailed to allocate memory for title\033[0m\n");
+                return ARGP_ERR_UNKNOWN;
+            }
+            strcpy(param->title, arg);
+            break;
+        case 'c':
+            param->css_href_len = strlen(arg);
+            param->css_href = malloc(param->css_href_len + 1);
+            if (!param->css_href) {
+                fprintf(stderr, "\033[1;31mFailed to allocate memory for CSS href\033[0m\n");
+                return ARGP_ERR_UNKNOWN;
+            }
+            strcpy(param->css_href, arg);
+            break;
+        default:
+            return ARGP_ERR_UNKNOWN;
+    }
     return 0;
+}
+
+static struct argp argp = {options, parse_opt, args_doc, doc, 0, 0, 0};
+
+int main(int argc, char **argv){
+    struct Parameters param = {0};
+    argp_parse(&argp, argc, argv, 0, 0, &param);
+    if (param.file) {
+        return process(&param);
+    }
+    return prompt(&param);
 }
