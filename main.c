@@ -154,7 +154,7 @@ int parse(char const* input, char ** restrict html,const unsigned long size, str
             wflush = 0;\
         }\
 
-    while (start < size-1){
+    while (start < size){
         
         if((input[start+1] == '#' || input[start+1] == '-'|| input[start+1] == '`' || input[start] == '\n') && nl){
             flush(); 
@@ -195,10 +195,10 @@ int parse(char const* input, char ** restrict html,const unsigned long size, str
             if (push_html_tag(html, &html_cursor, &html_capacity, 0, 3+stack)<0){
                 return -1;
             }
-            int tag = stack>0?stack==1?HTML_H2:HTML_H3:HTML_H1;
+            
             start+=stack;
             flush = 1;
-            wflush = tag;
+            wflush = 3+stack;
         }
 
         if ( nl && !flush && input[start] != '#') {
@@ -258,8 +258,11 @@ int parse(char const* input, char ** restrict html,const unsigned long size, str
                         printf("Failed to allocate memory :(\n");
                         exit(-1);
                     }
+                    *html = n;
+                    
                 }
                 memcpy(*html + html_cursor, "<hr/>", 5);
+                html_cursor += 5;
             }
             if(stack == 0){
                 continue;
@@ -278,9 +281,9 @@ int parse(char const* input, char ** restrict html,const unsigned long size, str
             unsigned long len = 0;
             int closed = 0;
             while (idx < size) {
-                if (input[idx] == '`' && (idx + stack <= size) && strncmp(&input[idx], "```", stack) == 0) {
+                if (input[idx] == '`' && (idx + stack <= size) && strncmp(&input[idx], stack==1?"`":"```", stack) == 0) {
                     closed = 1;
-                    idx += stack + 1;
+                    idx += stack;
                     break;
                 }
                 len++;
@@ -317,7 +320,7 @@ int parse(char const* input, char ** restrict html,const unsigned long size, str
         unsigned long val = dump_line(start, input,size, html,&html_capacity, &html_cursor, "*`-#\n\0"); 
         start += val>0?val:1;
     }
-
+    flush();
     
     char n[255] = {0};
     snprintf(n, 255, "./%s.html",param.title);
