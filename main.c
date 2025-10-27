@@ -11,8 +11,7 @@
  * See <https://www.gnu.org/licenses/> for details.
  */
 
-#include <alloca.h>
-#include<argp.h>
+#include <argp.h>
 #include <asm-generic/errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -156,8 +155,6 @@ int parse(char const* input, char ** restrict html,const unsigned long size, str
         }\
 
     while (start < size-1){
-        printf("bt: roll\n");
-        printf("bt: start %lu\n",start);
         
         if((input[start+1] == '#' || input[start+1] == '-'|| input[start+1] == '`' || input[start] == '\n') && nl){
             flush(); 
@@ -196,7 +193,6 @@ int parse(char const* input, char ** restrict html,const unsigned long size, str
                 break;
             }
             if (push_html_tag(html, &html_cursor, &html_capacity, 0, 3+stack)<0){
-                printf("Failed to allocate memory :( \n");
                 return -1;
             }
             int tag = stack>0?stack==1?HTML_H2:HTML_H3:HTML_H1;
@@ -207,7 +203,6 @@ int parse(char const* input, char ** restrict html,const unsigned long size, str
 
         if ( nl && !flush && input[start] != '#') {
             if (push_html_tag(html, &html_cursor, &html_capacity, 0, HTML_Paragraph) < 0) {
-                printf("Failed to allocate memory :(\n");
                 return -1;
             }
             wflush = HTML_Paragraph;
@@ -215,10 +210,9 @@ int parse(char const* input, char ** restrict html,const unsigned long size, str
         }
         
         if (input[start] == '*'){
-            printf("*\n");fflush(stdout); 
+            fflush(stdout); 
             int stack = 0;
             for (; start < size; ){
-                printf("%lu %c \n",start,input[start]);
                 if(input[start] == '*'){
                     stack++;
                     start++;
@@ -228,16 +222,13 @@ int parse(char const* input, char ** restrict html,const unsigned long size, str
                 }
             }
             int tag = stack>1?stack==2?HTML_Bold:HTML_Bold_Italic:HTML_Italic;
-            printf("tag %i\n",tag);
             if (push_html_tag(html, &html_cursor, &html_capacity, 0, tag) < 0){
-                printf("Failed to allocate memory :(\nFinishing the program.\n");;exit(-1);
+                exit(-1);
             };
-            printf("btag0\n");
             start += dump_line(start, input, size, html, &html_capacity, &html_cursor, "*") + stack;
             if (push_html_tag(html, &html_cursor, &html_capacity, 1, tag) < 0){
                 exit(-1);
             }
-            printf("btag1\n");
             continue; 
         }
         
