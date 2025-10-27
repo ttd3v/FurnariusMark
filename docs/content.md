@@ -10,7 +10,7 @@ Make sure you apply the needed permissions, using `chmod +x`. Also, unfortunatel
 If you don't like having to write "FurnariusMark" every time you want to use the tool, rename the binary name to whatever you want. If you want to write "poop" to use the tool, name the binary that way, and it will be called by this name.
 
 # Documentation - 0.1.0
-The project is in its first version (0.1.0), and it has the markdown essentials support, such as bold, italic, code (inline, multiline), headers, and line breakers (\\n, aka <br/>). It still lacks table, links (URLs and images), and citation quotes. It likely missed some features of markdown, since I made the tool tuned for how I interact with markdown. Yet, if you feel something is off, feel free to raise an issue; your help to improve the project would be appreciated (As it is under the GPL-3.0 license, you can raise a PR too). 
+The project is in its first version (0.1.0), and it has the markdown essentials support, such as bold, italic, code (inline, multiline), headers, and line breakers (aka &lt;<br/>&gt;). It still lacks table, links (URLs and images), and citation quotes. It likely missed some features of markdown, since I made the tool tuned for how I interact with markdown. Yet, if you feel something is off, feel free to raise an issue; your help to improve the project would be appreciated (As it is under the GPL-3.0 license, you can raise a PR too). 
 
 ## HTML tag
 As this project is meant to help with the construction of websites from markdown, having a way of generating raw HTML can be useful. That's why you can do so, by writing "::html::", once for starting the HTML context and once for closing this context. Everything within those tags will be directly pushed to the HTML file.
