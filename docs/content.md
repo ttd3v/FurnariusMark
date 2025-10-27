@@ -2,13 +2,7 @@ A software that parses markdown files into HTML, it is meant to help automate th
 
 The software is written in C, so it can be as lightweight as possible, and easy to install — Compile, good to go. It does have dependencies (argp.h, asm-generic/errno.h, stdio.h, stdlib.h, and string.h), but they can be considered standard library and likely are already on your machine.
 
-Installing the software is straightforward; you either install it through the convenience bash scripts or compile it yourself. 
-
-```bash
-instalation code
-```
-
-::html::<hr/><hr/>::html::
+Installing the software is straightforward; you either download the bin through the ::html::<a href="https://github.com/ttd3v/FurnariusMark/releases/download/0.0.1/FurnariusMark">latest release binary</a>::html:: or compile it yourself. With the binary, place it at `/usr/local/bin`; 
 
 # Documentation - 0.0.1
 The project is in its first version (0.0.1), it has the markdown essentials support such as bold, italic, code (inline, multiline), headers, and line breakers (\\n, aka <br/>). It still lacks table, links (URLs and images), and citation quotes. It likely missed some features of markdown, since I made the tool tuned for how I interact with markdown. Yet, if you feel something is off, feel free to raise an issue; your help to improve the project would be appreciated (As it is under the GPL-3.0 license, you can raise a PR too). 
