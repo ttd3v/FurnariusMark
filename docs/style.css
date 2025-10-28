@@ -15,16 +15,6 @@ body{
     flex-direction: column;
     gap: 5%;
 }
-#a {
-  height: 45vh;
-  width: 100% !important;
-  background-size: cover;
-  background-position: 50% 33%;
-  overflow:hidden;
-  background-image: 
-    linear-gradient(to top, var(--bgc), transparent),
-    url("/img.jpg");
-}
 main{
     margin-left:20%;
     margin-right:20%;
@@ -40,3 +30,29 @@ footer{
     padding-bottom: 2%;
     padding-left:2%;
 }
+
+#a-wrapper {
+    height: 45vh;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+#a-wrapper::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, var(--bgc), transparent);
+    z-index: 2;
+}
+
+#a {
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+    object-position: 50% 33%;
+    display: block;
+    z-index: 1;
+    position: relative;
+}
+
