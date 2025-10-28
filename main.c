@@ -119,13 +119,13 @@ unsigned int dump_line(const unsigned int start, const char* text,const unsigned
         break;
     }
     if(*html_capacity-*html_cursor < seg_size){
-        void *ptr = realloc(*html, 1+*html_capacity*2);
+        void *ptr = realloc(*html, 1+*html_capacity*4);
         if(ptr == NULL){
             printf("Critical, finishing the program.\n[ENOMEM] Failed to rallocate on dump_line\n");
             exit(-1);
         }
         *html = ptr;
-        *html_capacity*=2;
+        *html_capacity*=4;
         *html_capacity+=1;
     }
     memcpy(*html+*html_cursor, text+start, seg_size);
@@ -187,24 +187,19 @@ int parse(char const* input, char ** restrict html,const unsigned long size, str
             continue;
         }
         if(input[start] == '#' && nl){
-            int stack = -1;
-            __parse_header:
-                if (stack > 0){
-                    if (push_html_tag(html, &html_cursor, &html_capacity, 0, 3+stack)<0){
-                        return -1;
-                    }
-                    start+=stack;
-                    flush = 1;
-                    wflush = 3+stack;
-                    if(input[start] == ' '){start++;}
-                    continue;
-                }
-            if (size-start > 1 && input[start+1] != '#') {
-                stack = 1;
-                if (size-start > 2 && input[start+2] != '#') {stack = 2;
-                    if (size-start > 3 && input[start+3] != '#') {stack = 3;};};
-            };
-            goto __parse_header; 
+            int stack = 0;
+            
+            for(; input[start+stack] == '#'; stack++){}
+            start+=stack;
+            
+            if (push_html_tag(html, &html_cursor, &html_capacity, 0, 3+stack)<0){
+                return -1;
+            }
+            if(input[start] == ' '){start++;};
+            flush = 1;
+            wflush = 3+stack;
+            continue;
+            
         }
 
         if ( nl && !flush && input[start] != '#') {
@@ -337,12 +332,23 @@ int parse(char const* input, char ** restrict html,const unsigned long size, str
         return -1;
     }
     (*html)[html_cursor] = '\0'; 
-    size_t css_len = param.css_href ? strlen(param.css_href) : 0;
-    #define NULL_TERM_SIZE 1
-    char *final_html = malloc(strlen(*html)+NULL_TERM_SIZE + param.title_len+ NULL_TERM_SIZE+ css_len+ NULL_TERM_SIZE+ strlen(HTML_PRESET) + NULL_TERM_SIZE);
+    size_t title_len = param.title ? strlen(param.title) : 0;
+    size_t css_len   = param.css_href ? strlen(param.css_href) : 0;
+    size_t body_len  = strlen(*html);
+    size_t preset_len = strlen(HTML_PRESET);
 
-    snprintf(final_html, strlen(*html) + param.title_len + param.css_href_len + 300, 
-    HTML_PRESET, param.title, param.css_href ? param.css_href : "", *html);
+    size_t needed = preset_len - 6 + title_len + css_len + body_len + 1;
+
+    char *final_html = malloc(needed);
+    if (!final_html) {
+        printf("Failed to allocate memory for final HTML.\n");
+        return -1;
+    }
+
+    snprintf(final_html, needed, HTML_PRESET,
+             param.title ? param.title : "Untitled",
+             param.css_href ? param.css_href : "",
+             *html); 
 
     if (fwrite(final_html, strlen(final_html), 1, output) <= 0) {
         printf("Failed to write into the file.\n");
