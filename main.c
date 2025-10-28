@@ -199,9 +199,11 @@ int parse(char const* input, char ** restrict html,const unsigned long size, str
                     if(input[start] == ' '){start++;}
                     continue;
                 }
-            if (size-start > 1 && input[start+1] != '#') {stack = 1;};
-            if (size-start > 2 && input[start+2] != '#') {stack = 2;};
-            if (size-start > 3 && input[start+3] != '#') {stack = 3;};
+            if (size-start > 1 && input[start+1] != '#') {
+                stack = 1;
+                if (size-start > 2 && input[start+2] != '#') {stack = 2;
+                    if (size-start > 3 && input[start+3] != '#') {stack = 3;};};
+            };
             goto __parse_header; 
         }
 
