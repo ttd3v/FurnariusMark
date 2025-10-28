@@ -143,7 +143,8 @@ int parse(char const* input, char ** restrict html,const unsigned long size, str
     int flush = 0;
     int wflush = 0;
     #define nl (start == 0 ||input[start-1]=='\n')
-    
+    //                       ^^^^^^^^^^^^^^^^^^^^
+    //                       Fine because short-circuit skips it
     #define flush()\
         if(flush){\
             if (push_html_tag(html, &html_cursor, &html_capacity, 1, wflush)<0){\
@@ -156,14 +157,13 @@ int parse(char const* input, char ** restrict html,const unsigned long size, str
 
     while (start < size){
         
-        if((input[start+1] == '#' || input[start+1] == '-'|| input[start+1] == '`' || input[start] == '\n') && nl){
+        if(nl){
             flush(); 
             start++;
             continue;
         }
-        if(input[start] == '\n'){
+        if(input[start] == '\n' && start > 0 && input[start-1] =='\n' ){
             flush()
-            
             if(nl){
                 memcpy(*html+html_cursor, "<br/>",5);
                 html_cursor+=5;

@@ -23,7 +23,7 @@ body{
   overflow:hidden;
   background-image: 
     linear-gradient(to top, var(--bgc), transparent),
-    url("img.jpg") !important;
+    url("/img.jpg");
 }
 main{
     margin-left:20%;
