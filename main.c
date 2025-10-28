@@ -156,13 +156,13 @@ int parse(char const* input, char ** restrict html,const unsigned long size, str
         }\
 
     while (start < size){
-        
-        if(nl){
+        /*
+        if((input[start+1] == '#' || input[start+1] == '-'|| input[start+1] == '`' || input[start] == '\n') && nl){
             flush(); 
             start++;
             continue;
-        }
-        if(input[start] == '\n' && start > 0 && input[start-1] =='\n' ){
+        }*/
+        if(input[start] == '\n'){
             flush()
             if(nl){
                 memcpy(*html+html_cursor, "<br/>",5);
@@ -187,18 +187,22 @@ int parse(char const* input, char ** restrict html,const unsigned long size, str
             continue;
         }
         if(input[start] == '#' && nl){
-            int stack = 0;
-            for (idx = start; idx < size && stack < 3 && input[idx] != '\n'; idx++){
-                if(input[idx] == '#') {stack++;continue;};
-                break;
-            }
-            if (push_html_tag(html, &html_cursor, &html_capacity, 0, 3+stack)<0){
-                return -1;
-            }
-            
-            start+=stack;
-            flush = 1;
-            wflush = 3+stack;
+            int stack = -1;
+            __parse_header:
+                if (stack > 0){
+                    if (push_html_tag(html, &html_cursor, &html_capacity, 0, 3+stack)<0){
+                        return -1;
+                    }
+                    start+=stack;
+                    flush = 1;
+                    wflush = 3+stack;
+                    if(input[start] == ' '){start++;}
+                    continue;
+                }
+            if (size-start > 1 && input[start+1] != '#') {stack = 1;};
+            if (size-start > 2 && input[start+2] != '#') {stack = 2;};
+            if (size-start > 3 && input[start+3] != '#') {stack = 3;};
+            goto __parse_header; 
         }
 
         if ( nl && !flush && input[start] != '#') {
@@ -233,7 +237,7 @@ int parse(char const* input, char ** restrict html,const unsigned long size, str
         }
         
         
-        if(input[start] == '-' && nl && !flush){
+        if(nl && !flush && input[start] == '-'){
             int stack = 0;
             for (idx = start; idx < size && stack < 3 && input[idx] != '\n'; idx++){
                 if(input[idx] == '-') {stack++;continue;};
@@ -318,7 +322,7 @@ int parse(char const* input, char ** restrict html,const unsigned long size, str
         
        
         unsigned long val = dump_line(start, input,size, html,&html_capacity, &html_cursor, "*`-#\n\0"); 
-        start += val>0?val:1;
+        start += val > 0 ? val : 1;
     }
     flush();
     
